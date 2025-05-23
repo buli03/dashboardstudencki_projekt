@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Minutnik Pomodoro</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        #timer-display {
+            font-size: 6rem;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .btn-pomodoro {
+            margin: 5px;
+            min-width: 100px;
+        }
+        #session-type {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #007bff;
+        }
+        .controls button {
+            font-size: 1.2rem;
+            padding: 10px 20px;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+    <a class="navbar-brand" th:href="@{/dashboard}">Dashboard Studenta</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+            <li class="nav-item" th:classappend="${activePage == 'dashboard' ? 'active' : ''}">
+                <a class="nav-link" th:href="@{/dashboard}">Strona Główna</a>
+            </li>
+            <li class="nav-item" th:classappend="${activePage == 'tasks' ? 'active' : ''}">
+                <a class="nav-link" th:href="@{/tasks}">Zadania</a>
+            </li>
+            <li class="nav-item" th:classappend="${activePage == 'notes' ? 'active' : ''}">
+                <a class="nav-link" th:href="@{/notes}">Notatki</a>
+            </li>
+            <li class="nav-item" th:classappend="${activePage == 'pomodoro' ? 'active' : ''}">
+                <a class="nav-link" th:href="@{/pomodoro}">Pomodoro <span th:if="${activePage == 'pomodoro'}" class="sr-only">(current)</span></a>
+            </li>
+        </ul>
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                 <span class="navbar-text">
+                    Witaj, <span sec:authentication="name">NazwaUzytkownika</span>!
+                </span>
+            </li>
+            <li class="nav-item ml-2">
+                <form th:action="@{/logout}" method="post" class="form-inline">
+                    <button type="submit" class="btn btn-outline-danger btn-sm">Wyloguj</button>
+                </form>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<div class="container">
+    <h1 class="mb-4">Minutnik Pomodoro</h1>
+    <div id="session-type">Praca</div>
+    <div id="timer-display">25:00</div>
+    <div class="controls mb-3">
+        <button id="startButton" class="btn btn-success btn-lg btn-pomodoro">Start</button>
+        <button id="pauseButton" class="btn btn-warning btn-lg btn-pomodoro" disabled>Pauza</button>
+        <button id="resetButton" class="btn btn-danger btn-lg btn-pomodoro">Reset</button>
+    </div>
+    <div>
+        <p>Ukończone sesje Pomodoro: <span id="pomodoro-count">0</span></p>
+    </div>
+</div>
+
+<script>
+    const workDuration = 25 * 60; // 25 minut
+    const shortBreakDuration = 5 * 60; // 5 minut
+    const longBreakDuration = 15 * 60; // 15 minut
+
+    let currentTime = workDuration;
+    let timerInterval = null;
+    let isPaused = false;
+    let currentSession = 'work'; // 'work', 'shortBreak', 'longBreak'
+    let pomodorosCompleted = 0;
+    let sessionsBeforeLongBreak = 4;
+
+    const timerDisplay = document.getElementById('timer-display');
+    const sessionTypeDisplay = document.getElementById('session-type');
+    const startButton = document.getElementById('startButton');
+    const pauseButton = document.getElementById('pauseButton');
+    const resetButton = document.getElementById('resetButton');
+    const pomodoroCountDisplay = document.getElementById('pomodoro-count');
+
+    const alarmSound = new Audio('https://www.soundjay.com/buttons/sounds/button-09.mp3'); // Prosty dźwięk alarmu (możesz zmienić URL)
+
+    function updateDisplay() {
+        const minutes = Math.floor(currentTime / 60);
+        const seconds = currentTime % 60;
+        timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;;
+        document.title = `${timerDisplay.textContent} - ${currentSession === 'work' ? 'Praca' : 'Przerwa'}`;
+    }
+
+    function startTimer() {
+        if (timerInterval) return; // Już działa
+        isPaused = false;
+        startButton.disabled = true;
+        pauseButton.disabled = false;
+
+        timerInterval = setInterval(() => {
+            if (currentTime > 0) {
+                currentTime--;
+                updateDisplay();
+            } else {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                alarmSound.play(); // Odtwórz dźwięk
+                handleSessionEnd();
+            }
+        }, 1000);
+    }
+
+    function pauseTimer() {
+        if (!timerInterval || isPaused) return;
+        isPaused = true;
+        clearInterval(timerInterval);
+        timerInterval = null; // Ustaw na null, aby startTimer mógł wznowić
+        startButton.textContent = 'Wznów';
+        startButton.disabled = false;
+        pauseButton.disabled = true;
+    }
+
+    function resetTimer(sessionSwitch = false) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        isPaused = false;
+
+        if (!sessionSwitch) { // Reset do bieżącej sesji
+            if (currentSession === 'work') {
+                currentTime = workDuration;
+                sessionTypeDisplay.textContent = 'Praca';
+            } else if (currentSession === 'shortBreak') {
+                currentTime = shortBreakDuration;
+                sessionTypeDisplay.textContent = 'Krótka Przerwa';
+            } else if (currentSession === 'longBreak') {
+                currentTime = longBreakDuration;
+                sessionTypeDisplay.textContent = 'Długa Przerwa';
+            }
+        }
+
+        updateDisplay();
+        startButton.textContent = 'Start';
+        startButton.disabled = false;
+        pauseButton.disabled = true;
+    }
+
+    function handleSessionEnd() {
+        if (currentSession === 'work') {
+            pomodorosCompleted++;
+            pomodoroCountDisplay.textContent = pomodorosCompleted;
+            if (pomodorosCompleted % sessionsBeforeLongBreak === 0) {
+                currentSession = 'longBreak';
+                currentTime = longBreakDuration;
+                sessionTypeDisplay.textContent = 'Długa Przerwa';
+            } else {
+                currentSession = 'shortBreak';
+                currentTime = shortBreakDuration;
+                sessionTypeDisplay.textContent = 'Krótka Przerwa';
+            }
+        } else { // Była przerwa, wracamy do pracy
+            currentSession = 'work';
+            currentTime = workDuration;
+            sessionTypeDisplay.textContent = 'Praca';
+        }
+        resetTimer(true); // Reset do nowej sesji
+        // Można dodać automatyczne rozpoczęcie następnej sesji, jeśli chcesz
+        // startTimer();
+        alert(`${sessionTypeDisplay.textContent} - Czas start!`);
+    }
+
+    startButton.addEventListener('click', () => {
+        if (isPaused) { // Wznawianie
+            isPaused = false;
+            startTimer(); // Funkcja startTimer obsłuży wznowienie
+        } else {
+            startTimer();
+        }
+    });
+    pauseButton.addEventListener('click', pauseTimer);
+    resetButton.addEventListener('click', () => resetTimer(false));
+
+    updateDisplay();
+</script>
+
+<footer class="footer mt-auto py-3 bg-light text-center">
+    <div class="container">
+        <span class="text-muted">Dashboard Studencki &copy; 2025</span>
+    </div>
+</footer>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

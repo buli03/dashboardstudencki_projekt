@@ -7,13 +7,23 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         .task-description {
-            max-height: 60px; /* Ograniczenie wysokości opisu */
-            overflow-y: auto; /* Pasek przewijania dla dłuższego tekstu */
+            max-height: 60px;
+            overflow-y: auto;
             font-size: 0.9em;
             color: #555;
         }
         .table th, .table td {
             vertical-align: middle;
+        }
+        .table th a {
+            color: inherit;
+            text-decoration: none;
+        }
+        .table th a:hover {
+            text-decoration: underline;
+        }
+        .sort-indicator {
+            margin-left: 5px;
         }
     </style>
 </head>
@@ -26,13 +36,16 @@
     <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav">
             <li class="nav-item" th:classappend="${activePage == 'dashboard' ? 'active' : ''}">
-                <a class="nav-link" th:href="@{/dashboard}">Strona Główna <span th:if="${activePage == 'dashboard'}" class="sr-only">(current)</span></a>
+                <a class="nav-link" th:href="@{/dashboard}">Strona Główna</a>
             </li>
             <li class="nav-item" th:classappend="${activePage == 'tasks' ? 'active' : ''}">
                 <a class="nav-link" th:href="@{/tasks}">Zadania <span th:if="${activePage == 'tasks'}" class="sr-only">(current)</span></a>
             </li>
             <li class="nav-item" th:classappend="${activePage == 'notes' ? 'active' : ''}">
-                <a class="nav-link" th:href="@{/notes}">Notatki <span th:if="${activePage == 'notes'}" class="sr-only">(current)</span></a>
+                <a class="nav-link" th:href="@{/notes}">Notatki</a>
+            </li>
+            <li class="nav-item" th:classappend="${activePage == 'pomodoro' ? 'active' : ''}">
+                <a class="nav-link" th:href="@{/pomodoro}">Pomodoro</a>
             </li>
         </ul>
         <ul class="navbar-nav ml-auto">
@@ -56,18 +69,94 @@
         <a th:href="@{/tasks/new}" class="btn btn-success">Dodaj Nowe Zadanie</a>
     </div>
 
+    <form th:action="@{/tasks}" method="get" class="mb-4 p-3 border rounded bg-light">
+        <div class="form-row align-items-end">
+            <div class="form-group col-md-4">
+                <label for="searchTerm">Szukaj (tytuł/opis):</label>
+                <input type="text" id="searchTerm" name="searchTerm" th:value="${searchTerm}" class="form-control" placeholder="Wpisz frazę...">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="status">Status:</label>
+                <select id="status" name="status" class="form-control">
+                    <option value="">-- Wszystkie --</option>
+                    <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}" th:selected="${s == selectedStatus}"></option>
+                </select>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="priority">Priorytet:</label>
+                <select id="priority" name="priority" class="form-control">
+                    <option value="">-- Wszystkie --</option>
+                    <option th:each="p : ${priorities}" th:value="${p}" th:text="${p}" th:selected="${p == selectedPriority}"></option>
+                </select>
+            </div>
+            <input type="hidden" name="sortBy" th:value="${sortBy}">
+            <input type="hidden" name="sortDirection" th:value="${sortDirection}">
+
+            <div class="form-group col-md-2">
+                <button type="submit" class="btn btn-primary btn-block">Filtruj</button>
+            </div>
+        </div>
+        <div class="form-row mt-2">
+            <div class="col-md-12">
+                <a th:href="@{/tasks(sortBy=${sortBy}, sortDirection=${sortDirection})}" class="btn btn-outline-secondary btn-sm">Wyczyść filtry i wyszukiwanie</a>
+            </div>
+        </div>
+    </form>
+    <div th:if="${param.error}" class="alert alert-danger" th:text="${param.error}"></div>
+
+
     <div th:if="${#lists.isEmpty(tasks)}" class="alert alert-info">
-        Nie masz jeszcze żadnych zadań. Dodaj pierwsze!
+        Nie znaleziono zadań pasujących do kryteriów lub nie masz jeszcze żadnych zadań.
     </div>
 
     <table th:if="${not #lists.isEmpty(tasks)}" class="table table-striped table-hover">
         <thead class="thead-dark">
         <tr>
-            <th>Tytuł</th>
+            <th>
+                <a th:href="@{/tasks(searchTerm=${searchTerm}, status=${selectedStatus}, priority=${selectedPriority},
+                                   sortBy='title',
+                                   sortDirection=(${sortBy == 'title' && sortDirection == 'asc'} ? 'desc' : 'asc'))}">
+                    Tytuł
+                    <span th:if="${sortBy == 'title'}" class="sort-indicator">
+                        <span th:if="${sortDirection == 'asc'}">&uarr;</span>
+                        <span th:if="${sortDirection == 'desc'}">&darr;</span>
+                    </span>
+                </a>
+            </th>
             <th>Opis</th>
-            <th>Termin</th>
-            <th>Priorytet</th>
-            <th>Status</th>
+            <th>
+                <a th:href="@{/tasks(searchTerm=${searchTerm}, status=${selectedStatus}, priority=${selectedPriority},
+                                   sortBy='deadline',
+                                   sortDirection=(${sortBy == 'deadline' && sortDirection == 'asc'} ? 'desc' : 'asc'))}">
+                    Termin
+                    <span th:if="${sortBy == 'deadline'}" class="sort-indicator">
+                        <span th:if="${sortDirection == 'asc'}">&uarr;</span>
+                        <span th:if="${sortDirection == 'desc'}">&darr;</span>
+                    </span>
+                </a>
+            </th>
+            <th>
+                <a th:href="@{/tasks(searchTerm=${searchTerm}, status=${selectedStatus}, priority=${selectedPriority},
+                                   sortBy='priority',
+                                   sortDirection=(${sortBy == 'priority' && sortDirection == 'asc'} ? 'desc' : 'asc'))}">
+                    Priorytet
+                    <span th:if="${sortBy == 'priority'}" class="sort-indicator">
+                        <span th:if="${sortDirection == 'asc'}">&uarr;</span>
+                        <span th:if="${sortDirection == 'desc'}">&darr;</span>
+                    </span>
+                </a>
+            </th>
+            <th>
+                <a th:href="@{/tasks(searchTerm=${searchTerm}, status=${selectedStatus}, priority=${selectedPriority},
+                                   sortBy='status',
+                                   sortDirection=(${sortBy == 'status' && sortDirection == 'asc'} ? 'desc' : 'asc'))}">
+                    Status
+                    <span th:if="${sortBy == 'status'}" class="sort-indicator">
+                        <span th:if="${sortDirection == 'asc'}">&uarr;</span>
+                        <span th:if="${sortDirection == 'desc'}">&darr;</span>
+                    </span>
+                </a>
+            </th>
             <th>Akcje</th>
         </tr>
         </thead>
@@ -78,19 +167,25 @@
                 <div class="task-description" th:if="${task.description}" th:text="${task.description}"></div>
                 <span th:if="${task.description == null or #strings.isEmpty(task.description)}">-</span>
             </td>
-            <td th:text="${task.deadline != null ? #temporals.format(task.deadline, 'yyyy-MM-dd HH:mm') : '-'}">2025-05-21 15:00</td>
-            <td th:text="${task.priority}">Wysoki</td>
-            <td th:text="${task.status}">Do zrobienia</td>
+            <td th:text="${task.deadline != null ? #temporals.format(task.deadline, 'yyyy-MM-dd HH:mm') : '-'}">Data</td>
+            <td th:text="${task.priority}">Priorytet</td>
+            <td th:text="${task.status}">Status</td>
             <td>
-                <a th:href="@{/tasks/edit/{id}(id=${task.id})}" class="btn btn-sm btn-primary">Edytuj</a>
+                <a th:href="@{/tasks/edit/{id}(id=${task.id})}" class="btn btn-sm btn-primary mb-1 d-block">Edytuj</a>
                 <a th:href="@{/tasks/delete/{id}(id=${task.id})}"
-                   class="btn btn-sm btn-danger"
+                   class="btn btn-sm btn-danger d-block"
                    onclick="return confirm('Czy na pewno chcesz usunąć to zadanie?');">Usuń</a>
             </td>
         </tr>
         </tbody>
     </table>
 </div>
+
+<footer class="footer mt-auto py-3 bg-light text-center">
+    <div class="container">
+        <span class="text-muted">Dashboard Studencki &copy; <span th:text="${#dates.year(#dates.createNow())}">2025</span></span>
+    </div>
+</footer>
 
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
