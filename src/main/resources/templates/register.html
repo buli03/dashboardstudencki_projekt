@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Rejestracja</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .registration-container {
+            max-width: 500px;
+            margin-top: 50px;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+<div class="container registration-container">
+    <h2 class="text-center mb-4">Zarejestruj nowe konto</h2>
+
+    <form th:action="@{/register}" th:object="${userDto}" method="post">
+        <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger mb-3">
+            <p th:each="err : ${#fields.globalErrors()}" th:text="${err}" class="mb-0">Błąd globalny</p>
+        </div>
+
+        <div class="form-group">
+            <label for="username">Nazwa użytkownika:</label>
+            <input type="text" th:field="*{username}" id="username" class="form-control"
+                   th:classappend="${#fields.hasErrors('username')} ? 'is-invalid' : ''"
+                   required autofocus/>
+            <div th:if="${#fields.hasErrors('username')}" class="invalid-feedback" th:errors="*{username}">
+                Błąd nazwy użytkownika
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Hasło:</label>
+            <input type="password" th:field="*{password}" id="password" class="form-control"
+                   th:classappend="${#fields.hasErrors('password')} ? 'is-invalid' : ''"
+                   required/>
+            <div th:if="${#fields.hasErrors('password')}" class="invalid-feedback" th:errors="*{password}">
+                Błąd hasła
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="confirmPassword">Potwierdź hasło:</label>
+            <input type="password" th:field="*{confirmPassword}" id="confirmPassword" class="form-control"
+                   th:classappend="${#fields.hasErrors('confirmPassword')} ? 'is-invalid' : ''"
+                   required/>
+            <div th:if="${#fields.hasErrors('confirmPassword')}" class="invalid-feedback" th:errors="*{confirmPassword}">
+                Błąd potwierdzenia hasła
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Zarejestruj się</button>
+
+        <div class="text-center mt-3">
+            <p>Masz już konto? <a th:href="@{/login}">Zaloguj się</a></p>
+        </div>
+    </form>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

@@ -5,6 +5,48 @@
     <meta charset="UTF-8">
     <title>Dashboard Studencki</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .stat-card {
+            margin-bottom: 20px;
+        }
+        .stat-card .card-body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 140px; /* Zapewnia pewną minimalną wysokość dla kart */
+            padding: 1rem;
+        }
+        .stat-card .stat-number {
+            font-size: 2.8rem; /* Nieco większa liczba */
+            font-weight: bold;
+            line-height: 1.1; /* Lepsze dopasowanie linii */
+        }
+        .stat-card .card-title {
+            font-size: 1rem; /* Dostosowany rozmiar tytułu karty */
+            margin-top: 0.5rem; /* Odstęp od liczby */
+            text-align: center;
+            /* Kolor tekstu będzie dziedziczony z .card (np. text-white) lub domyślny */
+        }
+
+        /* Poprawki dla specyficznych teł, jeśli domyślne Bootstrapa nie wystarczą */
+        /* Dla bg-warning, domyślny ciemny tekst jest lepszy niż text-white */
+        .card.bg-warning .card-title,
+        .card.bg-warning .stat-number {
+            color: #533f03; /* Ciemniejszy, bardziej czytelny żółto-brązowy */
+        }
+        /* Dla bg-info, domyślny ciemny tekst jest często lepszy */
+         .card.bg-info .card-title,
+         .card.bg-info .stat-number {
+            color: #0c5460; /* Ciemniejszy cyjan */
+         }
+         /* Dla bg-light, domyślny ciemny tekst jest już OK */
+
+         /* Dla kart z text-white, upewnijmy się, że tytuł też jest biały */
+         .card.text-white .card-title {
+            color: rgba(255, 255, 255, 0.9); /* Lekko przezroczysty biały dla subtelności */
+         }
+    </style>
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
@@ -18,13 +60,13 @@
                 <a class="nav-link" th:href="@{/dashboard}">Strona Główna <span th:if="${activePage == 'dashboard'}" class="sr-only">(current)</span></a>
             </li>
             <li class="nav-item" th:classappend="${activePage == 'tasks' ? 'active' : ''}">
-                <a class="nav-link" th:href="@{/tasks}">Zadania <span th:if="${activePage == 'tasks'}" class="sr-only">(current)</span></a>
+                <a class="nav-link" th:href="@{/tasks}">Zadania</a>
             </li>
             <li class="nav-item" th:classappend="${activePage == 'notes' ? 'active' : ''}">
-                <a class="nav-link" th:href="@{/notes}">Notatki <span th:if="${activePage == 'notes'}" class="sr-only">(current)</span></a>
+                <a class="nav-link" th:href="@{/notes}">Notatki</a>
             </li>
             <li class="nav-item" th:classappend="${activePage == 'pomodoro' ? 'active' : ''}">
-                <a class="nav-link" th:href="@{/pomodoro}">Pomodoro <span th:if="${activePage == 'pomodoro'}" class="sr-only">(current)</span></a>
+                <a class="nav-link" th:href="@{/pomodoro}">Pomodoro</a>
             </li>
         </ul>
         <ul class="navbar-nav ml-auto">
@@ -43,13 +85,83 @@
 </nav>
 
 <div class="container mt-4">
-    <h1>Witaj na Twoim dashboardzie, <span th:text="${username}">Użytkowniku</span>!</h1>
-    <p>To jest główna strona Twojej aplikacji. Możesz stąd przejść do zarządzania swoimi zadaniami.</p>
-    <p><a th:href="@{/tasks}" class="btn btn-info">Przejdź do Zadań</a></p>
-
-    <div sec:authorize="hasRole('ROLE_ADMIN')">
-        <p class="text-success">Masz uprawnienia ADMINISTRATORA.</p>
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>Witaj na Twoim dashboardzie, <span th:text="${username}">Użytkowniku</span>!</h1>
     </div>
+    <p class="lead">Tutaj znajdziesz podsumowanie swojej aktywności i szybki dostęp do modułów.</p>
+
+    <hr class="my-4">
+
+    <h2>Statystyki</h2>
+    <div class="row mt-3">
+        <div class="col-md-4 stat-card">
+            <div class="card text-white bg-primary"> <div class="card-body">
+                <div class="stat-number" th:text="${totalTasks}">0</div>
+                <div class="card-title">Wszystkich Zadań</div>
+            </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 stat-card">
+            <div class="card bg-warning"> <div class="card-body">
+                <div class="stat-number" th:text="${todoTasks}">0</div>
+                <div class="card-title">Zadań Do Zrobienia</div>
+            </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 stat-card">
+            <div class="card bg-info"> <div class="card-body">
+                <div class="stat-number" th:text="${inProgressTasks}">0</div>
+                <div class="card-title">Zadań W Trakcie</div>
+            </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 stat-card">
+            <div class="card text-white bg-success"> <div class="card-body">
+                <div class="stat-number" th:text="${completedTasks}">0</div>
+                <div class="card-title">Zadań Ukończonych</div>
+            </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 stat-card">
+            <div class="card bg-light"> <div class="card-body">
+                <div class="stat-number" th:text="${totalNotes}">0</div>
+                <div class="card-title">Wszystkich Notatek</div>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-4">
+    <h2>Szybkie Akcje</h2>
+    <div class="row mt-3">
+        <div class="col-md-3 mb-3">
+            <a th:href="@{/tasks}" class="btn btn-lg btn-outline-primary btn-block">Przejdź do Zadań</a>
+        </div>
+        <div class="col-md-3 mb-3">
+            <a th:href="@{/notes}" class="btn btn-lg btn-outline-secondary btn-block">Przejdź do Notatek</a>
+        </div>
+        <div class="col-md-3 mb-3">
+            <a th:href="@{/pomodoro}" class="btn btn-lg btn-outline-info btn-block">Uruchom Pomodoro</a>
+        </div>
+        <div class="col-md-3 mb-3" sec:authorize="hasRole('ROLE_ADMIN')">
+            <p class="text-success mt-2 text-center">Panel Administratora Aktywny</p>
+        </div>
+    </div>
+
 </div>
+
+<footer class="footer mt-auto py-3 bg-light text-center">
+    <div class="container">
+        <span class="text-muted">Dashboard Studencki &copy; <span th:text="${#dates.year(#dates.createNow())}">2025</span></span>
+    </div>
+</footer>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
