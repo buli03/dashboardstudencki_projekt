@@ -2,8 +2,8 @@ package com.example.dashboardstudencki.controller;
 
 import com.example.dashboardstudencki.model.Note;
 import com.example.dashboardstudencki.model.User;
-import com.example.dashboardstudencki.service.NoteServiceImpl; // Używamy implementacji dla getCurrentUser()
-import jakarta.validation.Valid; // Dla @Valid, jeśli dodasz walidację
+import com.example.dashboardstudencki.service.NoteServiceImpl;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,7 +17,7 @@ import java.util.Optional;
 @RequestMapping("/notes")
 public class NoteController {
 
-    private final NoteServiceImpl noteService; // Używamy NoteServiceImpl, aby mieć dostęp do getCurrentUser()
+    private final NoteServiceImpl noteService;
 
     @Autowired
     public NoteController(NoteServiceImpl noteService) {
@@ -25,20 +25,32 @@ public class NoteController {
     }
 
     @GetMapping
-    public String listNotes(Model model) {
+    public String listNotes(Model model,
+                            @RequestParam(value = "searchTerm", required = false) String searchTerm,
+                            @RequestParam(value = "sortBy", required = false, defaultValue = "updatedAt") String sortBy,
+                            @RequestParam(value = "sortDirection", required = false, defaultValue = "desc") String sortDirection) {
+
         User currentUser = noteService.getCurrentUser();
-        List<Note> notes = noteService.findAllNotesByUser(currentUser);
+        List<Note> notes = noteService.searchAndSortNotes(currentUser, searchTerm, sortBy, sortDirection);
+
         model.addAttribute("notes", notes);
-        return "notes/list"; // Widok: src/main/resources/templates/notes/list.html
+        model.addAttribute("activePage", "notes");
+
+        // Przekazanie parametrów wyszukiwania/sortowania z powrotem do widoku
+        model.addAttribute("searchTerm", searchTerm);
+        model.addAttribute("sortBy", sortBy);
+        model.addAttribute("sortDirection", sortDirection);
+
+        return "notes/list";
     }
 
     @GetMapping("/new")
     public String showCreateNoteForm(Model model) {
-        model.addAttribute("note", new Note()); // Pusty obiekt Note dla formularza
+        model.addAttribute("note", new Note());
         model.addAttribute("formTitle", "Nowa notatka");
-        model.addAttribute("actionUrl", "/notes/save"); // Akcja formularza
+        model.addAttribute("actionUrl", "/notes/save");
         model.addAttribute("activePage", "notes");
-        return "notes/form"; // Widok: src/main/resources/templates/notes/form.html
+        return "notes/form";
     }
 
     @GetMapping("/edit/{id}")
@@ -48,20 +60,18 @@ public class NoteController {
         if (noteOptional.isPresent()) {
             model.addAttribute("note", noteOptional.get());
             model.addAttribute("formTitle", "Edytuj notatkę");
-            model.addAttribute("actionUrl", "/notes/save/" + id); // Akcja formularza z ID
+            model.addAttribute("actionUrl", "/notes/save/" + id);
             model.addAttribute("activePage", "notes");
             return "notes/form";
         } else {
-            // Notatka nie znaleziona lub brak dostępu
             return "redirect:/notes?error=notFoundOrAccessDenied";
         }
     }
 
-    @PostMapping("/save") // Zapis nowej notatki
+    @PostMapping("/save")
     public String saveNewNote(@Valid @ModelAttribute("note") Note note, BindingResult result, Model model) {
         User currentUser = noteService.getCurrentUser();
         if (result.hasErrors()) {
-            // Jeśli są błędy walidacji, wróć do formularza
             model.addAttribute("formTitle", "Nowa notatka");
             model.addAttribute("actionUrl", "/notes/save");
             model.addAttribute("activePage", "notes");
@@ -71,7 +81,7 @@ public class NoteController {
         return "redirect:/notes";
     }
 
-    @PostMapping("/save/{id}") // Aktualizacja istniejącej notatki
+    @PostMapping("/save/{id}")
     public String updateExistingNote(@PathVariable("id") Long id, @Valid @ModelAttribute("note") Note note,
                                      BindingResult result, Model model) {
         User currentUser = noteService.getCurrentUser();
@@ -81,17 +91,13 @@ public class NoteController {
             model.addAttribute("activePage", "notes");
             return "notes/form";
         }
-
-        // Sprawdź, czy notatka do edycji faktycznie należy do użytkownika
         Optional<Note> existingNoteOpt = noteService.findNoteByIdAndUser(id, currentUser);
         if (existingNoteOpt.isPresent()) {
             Note existingNote = existingNoteOpt.get();
             existingNote.setTitle(note.getTitle());
             existingNote.setContent(note.getContent());
-            // Daty createdAt i updatedAt są zarządzane przez @PrePersist i @PreUpdate
-            noteService.saveNote(existingNote, currentUser); // Zapisz zaktualizowaną notatkę
+            noteService.saveNote(existingNote, currentUser);
         } else {
-            // Obsługa sytuacji, gdy notatka nie istnieje lub nie należy do użytkownika
             return "redirect:/notes?error=notFoundOrAccessDeniedDuringUpdate";
         }
         return "redirect:/notes";

@@ -11,4 +11,6 @@ public interface NoteService {
     Optional<Note> findNoteByIdAndUser(Long id, User user);
     Note saveNote(Note note, User user);
     void deleteNoteByIdAndUser(Long id, User user);
+
+    List<Note> searchAndSortNotes(User user, String searchTerm, String sortBy, String sortDirection);
 }
