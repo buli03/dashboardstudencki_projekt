@@ -86,7 +86,6 @@ Przy pierwszym uruchomieniu aplikacji (lub jeśli baza danych jest czyszczona), 
 ## Dalszy Rozwój (Pomysły)
 
 * Implementacja modułu Kalendarza z importem plików `.ics`.
-* Rozbudowa notatek o edytor WYSIWYG.
 * Wizualny widok Kanban dla zadań (z funkcją drag-and-drop).
 * Organizator materiałów do nauki.
 * Fiszki (Flashcards) do nauki.

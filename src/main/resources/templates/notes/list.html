@@ -7,11 +7,16 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         .note-content-preview {
-            max-height: 80px;
-            overflow-y: auto;
+            max-height: 100px; /* Możesz dostosować wysokość podglądu */
+            overflow-y: hidden; /* Zmienione z 'auto' na 'hidden' dla czystszego podglądu */
             font-size: 0.9em;
-            color: #555;
-            white-space: pre-wrap;
+            color: #333; /* Lekko ciemniejszy dla lepszej czytelności HTML */
+            /* white-space: pre-wrap; Usunięte - HTML samo zarządza białymi znakami */
+            word-wrap: break-word; /* Zapobiega "rozjeżdżaniu się" długich słów/linków */
+        }
+        /* Dodatkowe style dla elementów wewnątrz podglądu, jeśli potrzebne */
+        .note-content-preview p:last-child {
+            margin-bottom: 0; /* Usuwa margines z ostatniego paragrafu w podglądzie */
         }
         .card-title a {
             color: inherit;
@@ -114,29 +119,31 @@
 
     <div class="row" th:if="${not #lists.isEmpty(notes)}">
         <div class="col-md-4 mb-4" th:each="note : ${notes}">
-            <div class="card h-100"> <div class="card-body d-flex flex-column"> <h5 class="card-title">
-                <a th:href="@{/notes/edit/{id}(id=${note.id})}" th:text="${note.title != null and not #strings.isEmpty(note.title) ? note.title : 'Notatka bez tytułu'}">Tytuł Notatki</a>
-            </h5>
-                <div class="note-content-preview flex-grow-1" th:if="${note.content}" th:text="${#strings.abbreviate(note.content, 150)}">
-                    Fragment treści...
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">
+                        <a th:href="@{/notes/edit/{id}(id=${note.id})}" th:text="${note.title != null and not #strings.isEmpty(note.title) ? note.title : 'Notatka bez tytułu'}">Tytuł Notatki</a>
+                    </h5>
+                    <div class="note-content-preview flex-grow-1" th:if="${note.content != null and not #strings.isEmpty(note.content)}" th:utext="${note.content}">
+                    </div>
+                    <div class="flex-grow-1" th:if="${note.content == null or #strings.isEmpty(note.content)}">
+                        <em class="text-muted">(Brak treści)</em>
+                    </div>
+                    <p class="card-text mt-auto">
+                        <small class="text-muted" th:text="'Mod.: ' + ${note.updatedAt != null ? #temporals.format(note.updatedAt, 'dd-MM-yy HH:mm') : '-'}">
+                            Data modyfikacji
+                        </small><br/>
+                        <small class="text-muted" th:text="'Utw.: ' + ${note.createdAt != null ? #temporals.format(note.createdAt, 'dd-MM-yy HH:mm') : '-'}">
+                            Data utworzenia
+                        </small>
+                    </p>
+                    <div class="mt-2">
+                        <a th:href="@{/notes/edit/{id}(id=${note.id})}" class="btn btn-sm btn-primary">Edytuj</a>
+                        <a th:href="@{/notes/delete/{id}(id=${note.id})}"
+                           class="btn btn-sm btn-danger"
+                           onclick="return confirm('Czy na pewno chcesz usunąć tę notatkę?');">Usuń</a>
+                    </div>
                 </div>
-                <p class="card-text flex-grow-1" th:if="${note.content == null or #strings.isEmpty(note.content)}">
-                    <em class="text-muted">(Brak treści)</em>
-                </p>
-                <p class="card-text mt-auto"> <small class="text-muted" th:text="'Mod.: ' + ${note.updatedAt != null ? #temporals.format(note.updatedAt, 'dd-MM-yy HH:mm') : '-'}">
-                    Data modyfikacji
-                </small><br/>
-                    <small class="text-muted" th:text="'Utw.: ' + ${note.createdAt != null ? #temporals.format(note.createdAt, 'dd-MM-yy HH:mm') : '-'}">
-                        Data utworzenia
-                    </small>
-                </p>
-                <div class="mt-2">
-                    <a th:href="@{/notes/edit/{id}(id=${note.id})}" class="btn btn-sm btn-primary">Edytuj</a>
-                    <a th:href="@{/notes/delete/{id}(id=${note.id})}"
-                       class="btn btn-sm btn-danger"
-                       onclick="return confirm('Czy na pewno chcesz usunąć tę notatkę?');">Usuń</a>
-                </div>
-            </div>
             </div>
         </div>
     </div>
